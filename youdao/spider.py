@@ -1,5 +1,6 @@
 # coding:utf-8
 
+import time
 import hashlib
 import re
 import json
@@ -25,8 +26,8 @@ class YoudaoSpider:
         'q': 'query'
     }
     api_url = u'http://fanyi.youdao.com/openapi.do'
-    voice_url = u'http://dict.youdao.com/dictvoice?type=2&audio={word}'
     web_url = u'http://dict.youdao.com/search?keyfrom=dict.top&q='
+    voice_url = u'http://dict.youdao.com/dictvoice?type=2&audio={word}'
     translation_url = u'http://fanyi.youdao.com/translate_o?smartresult=dict&smartresult=rule'
 
     error_code = {
@@ -112,7 +113,7 @@ class YoudaoSpider:
                     'value': [v.strip() for v in unicode(wordgroup.find('span').next_sibling).split(';')]
                 } for wordgroup in web.find_all(class_='wordGroup', limit=4)
             ]
-    
+
     def md5(self, str_data):
         """
         md5加密
@@ -130,15 +131,15 @@ class YoudaoSpider:
         """
 
         client = 'fanyideskweb'  #判断是网页还是客户端
-        
+
         # 由于网页是用的js的时间戳(毫秒)跟python(秒)的时间戳不在一个级别，所以需要*1000
         salt = str(int(time.time()*1000))
-        
+
         # 网上不同的攻略取的魔数是不一样的，可能对应不同的版本吧
         c = "@6f#X3=cCuncYssPsuRUE"
         # c = "rY0D^0'nM0}g5Mm1z%1G4"
         # c = "ebSeFb%=XZ%T[KZ)c(sy!"
-        
+
         # 根据md5的方式：md5(u + d + f + c)，拼接字符串生成sign参数。
         sign = self.md5(client + word + salt + c)
 
@@ -163,7 +164,7 @@ class YoudaoSpider:
             'typoResult':'false',
         }
 
-        headers = {    
+        headers = {
             'Accept': 'application/json, text/javascript, */*; q=0.01',
             'Accept-Encoding': 'gzip, deflate', #
             'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
@@ -179,9 +180,11 @@ class YoudaoSpider:
         r = requests.post(self.translation_url, headers=headers, data=data)
         pattern = re.compile(r'"translateResult":\[(\[.+\])\]')
         m = pattern.search(r.text)
-        result = json.loads(m.group(1))
-        return [item['tgt'] for item in result]
-        
+        if m:
+            result = json.loads(m.group(1))
+            return [item['tgt'] for item in result]
+        return ''
+
     @classmethod
     def get_voice(cls, word):
         voice_file = os.path.join(VOICE_DIR, word+'.mp3')

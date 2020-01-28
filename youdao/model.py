@@ -38,3 +38,16 @@ class Word(BaseModel):
             return word
         except cls.DoesNotExist:
             return None
+    
+    @classmethod
+    def get_today_words(cls, days):
+        try:
+            now = datetime.datetime.now() - datetime.timedelta(days-1, 0, 0)
+            one_day = datetime.timedelta(1, 0, 0)
+            if now.hour < 4:
+                now -= one_day
+            today_s = datetime.datetime(now.year, now.month, now.day, 4, 0, 0)
+            return cls.select().where(Word.query_time > today_s).order_by(cls.query_time.desc())
+            
+        except cls.DoesNotExist:
+            return None

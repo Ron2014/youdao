@@ -42,7 +42,7 @@ def show_result(result):
 
         if 'translation' in result:
             print colored(u'有道翻译:', 'blue')
-            print colored('\t'+'\n\t'.join(result['translation']), 'cyan')
+            print colored('\t'+'\n\t'.join(str(result['translation'])), 'cyan')
 
         if 'web' in result:
             print colored(u'网络释义:', 'blue')
@@ -127,6 +127,12 @@ def show_db_list():
     for word in Word.select():
         print colored(word.keyword, 'cyan'), colored(str(word.count), 'green')
 
+def show_today_list(args):
+    days = int(args)
+    print colored(u'近%d天内查询的单词:'%(days), 'blue')
+    for word in Word.get_today_words(days):
+        print colored(word.keyword, 'cyan'), colored(str(word.count), 'green')
+
 
 def del_word(keyword):
     if keyword:
@@ -144,7 +150,32 @@ def del_word(keyword):
 
 
 def show_help():
-    pass
+    desc = '''
+    == 说明 ==
+
+    * 功能描述
+
+    获取查询结果有两种方式：
+    1. 使用api的方式，直接返回json字符串
+    2. 使用页面方式，则需要借用BeautifulSoup解析返回的html
+    PS. 如果以上查询都失败（比如给句子加上标点），则使用有道翻译
+
+    查询记录保存在peewee数据库中，所有基于db的操作都与此有关
+    离线字典保存的目录，由config.config['stardict']指定
+
+    * 可选参数
+
+    -a          使用有道api查询，参考官网 http://fanyi.youdao.com/openapi?path=data-mode
+    -n          不用数据库中缓存的查询记录
+    -l          列出查询记录及累计次数
+    -t [day]    列出近几天查过的单词
+    -d [key]    删除制定文本的查询记录，包括发音文件
+    -c          删除所有的查询记录，包括发音文件
+    -v          查询并播放发音，可使用 yd -v 重复播放上一查询记录的发音
+    -s [path]   指定离线字典的目录，默认为/dicts
+    -y          完全的在线查询。既不使用数据库查询记录，也不使用离线字典
+    '''
+    print desc
 
 
 def main():
@@ -153,7 +184,7 @@ def main():
         
     config.prepare()
     try:
-        options, args = getopt.getopt(sys.argv[1:], 'anld:cvs:y', ['help'])
+        options, args = getopt.getopt(sys.argv[1:], 'anlt:d:cvs:y', ['help'])
     except getopt.GetoptError:
         options = [('--help', '')]
     if ('--help', '') in options:
@@ -164,6 +195,7 @@ def main():
     use_db = True
     play_voice = False
     use_dict = True
+    # print(options)
     for opt in options:
         if opt[0] == '-a':
             use_api = True
@@ -171,6 +203,9 @@ def main():
             use_db = False
         elif opt[0] == '-l':
             show_db_list()
+            sys.exit()
+        elif opt[0] == '-t':
+            show_today_list(opt[1])
             sys.exit()
         elif opt[0] == '-d':
             del_word(opt[1])
@@ -190,7 +225,7 @@ def main():
         elif opt[0] == '-y':
             use_dict = False
             use_db = False
-
+    
     dict_path = os.path.join(config.HOME, "dicts")
     config.set_dict_path(dict_path)
 
