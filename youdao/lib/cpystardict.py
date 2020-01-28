@@ -65,9 +65,13 @@ class _StarDictIfo(object):
         
         ifo_filename = '%s.ifo' % dict_prefix
         
+        print "xxxxxxxxxx"
+        print "ifo_filename: " + ' ' + ifo_filename
+        
         try:
             _file = open(ifo_filename)
         except IOError:
+            print "good" + ifo_filename
             raise Exception('.ifo file does not exists')
         
         # skipping ifo header

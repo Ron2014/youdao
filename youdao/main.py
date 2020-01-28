@@ -1,9 +1,10 @@
 # coding:utf-8
+# -*- coding: utf-8 -*- 
 
 import sys
 import os
 import shutil
-import argparse
+import getopt
 import requests
 import json
 import webbrowser
@@ -61,7 +62,7 @@ def play(voice_file):
         os.dup2(out2, 2)
 
 
-def query(keyword, use_db=True,  use_dict=True, play_voice=False):
+def query(keyword, use_db=True, use_api=False, play_voice=False, use_dict=True):
     update_word = [True]
     word = Word.get_word(keyword)
     result = {'query': keyword, 'errorCode': 60}
@@ -101,7 +102,11 @@ def query(keyword, use_db=True,  use_dict=True, play_voice=False):
         # 从stardict中没有匹配单词
         if not result['errorCode'] == 0:
             spider = YoudaoSpider(keyword)
-            result.update(spider.get_result(use_api=False))
+            try:
+                result.update(spider.get_result(use_api))
+            except requests.HTTPError, e:
+                print colored(u'网络错误: %s' % e.message, 'red')
+                sys.exit()
 
         # 更新数据库
         new_word = word if word else Word()
@@ -138,60 +143,70 @@ def del_word(keyword):
         print(colored(u'共删除{0}个单词'.format(count), 'blue'))
 
 
-def parse_args():
-    """Parse input arguments."""
-    parser = argparse.ArgumentParser(description='控制台下的有道词典')
-    parser.add_argument('word', nargs='*', type=str)
-    parser.add_argument('-y', '--youdao', action='store_true', help='优先使用有道词典（默认使用stardict）')
-    parser.add_argument('-n', '--new', action='store_true', help='忽略本地数据库，强制重新查词')
-    parser.add_argument('-l', '--list', action='store_true', help='列出本地保存的所有单词')
-    parser.add_argument('-c', '--clean', action='store_true', help='清空本地数据库')
-    parser.add_argument('-v', '--voice', action='store_true', help='获取单词发音')
-    parser.add_argument('-d', '--delete', action='store_true', help='删除本地单词')
-    parser.add_argument('-s', '--stardict', dest='stardict', type=str, default='', help='设置stardict词典路径')
-
-    args = parser.parse_args()
-    return args
+def show_help():
+    pass
 
 
 def main():
-    # resolve issue #9
     reload(sys)
-    sys.setdefaultencoding('utf-8')
-    args = parse_args()
+    sys.setdefaultencoding("utf-8")
+        
     config.prepare()
+    try:
+        options, args = getopt.getopt(sys.argv[1:], 'anld:cvs:y', ['help'])
+    except getopt.GetoptError:
+        options = [('--help', '')]
+    if ('--help', '') in options:
+        show_help()
+        return
 
-    if args.stardict:
-        if os.path.isdir(args.stardict):
-            config.set_dict_path(args.stardict)
-            print('stardict 路径设置成功：{}'.format(args.stardict))
+    use_api = False
+    use_db = True
+    play_voice = False
+    use_dict = True
+    for opt in options:
+        if opt[0] == '-a':
+            use_api = True
+        elif opt[0] == '-n':
+            use_db = False
+        elif opt[0] == '-l':
+            show_db_list()
+            sys.exit()
+        elif opt[0] == '-d':
+            del_word(opt[1])
+            sys.exit()
+        elif opt[0] == '-c':
+            del_word(None)
+            sys.exit()
+        elif opt[0] == '-v':
+            play_voice = True
+        elif opt[0] == '-s':
+            if os.path.isdir(opt[1]):
+                print u'stardict 路径设置成功：', opt[1]
+                config.set_dict_path(opt[1])
+            else:
+                print u'stardict 路径设置失败. 原因可能是路径"%s"不存在.' % opt[1]
+            sys.exit()
+        elif opt[0] == '-y':
+            use_dict = False
+            use_db = False
+
+    SNAP = "D:\\youdao"
+    print "SNAP: " + SNAP
+    config.set_dict_path(SNAP + "\\dicts")
+
+    # keyword = unicode(' '.join(args), encoding=sys.getfilesystemencoding())
+    keyword = unicode(' '.join(args), encoding='utf-8')
+
+    if not keyword:
+        if play_voice:
+            word = Word.get_last_word()
+            keyword = word.keyword
+            query(keyword, play_voice=True, use_db=True)
         else:
-            print('stardict 路径设置失败. 路径"%s"不存在.'.format(args.stardict))
-        return
-
-    if args.list:
-        show_db_list()
-        return
-
-    if args.clean:
-        del_word(None)
-        return
-
-    if len(args.word) > 0:
-        keyword = unicode(' '.join(args.word), encoding=sys.getfilesystemencoding())
+            show_help()
     else:
-        word = Word.get_last_word()
-        keyword = word.keyword
-
-    if args.delete:
-        del_word(keyword)
-        return
-
-    use_db = not args.new
-    use_dict = not args.youdao
-    play_voice = args.voice
-    query(keyword, use_db, use_dict, play_voice)
-
+        query(keyword, use_db, use_api, play_voice, use_dict)
 
 if __name__ == '__main__':
     main()

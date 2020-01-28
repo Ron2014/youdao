@@ -1,10 +1,11 @@
 # coding:utf-8
 
+import hashlib
 import re
-import sys
+import json
 import os
 import requests
-from requests.exceptions import RequestException
+import webbrowser
 from termcolor import colored
 from bs4 import BeautifulSoup
 from config import VOICE_DIR
@@ -25,7 +26,8 @@ class YoudaoSpider:
     }
     api_url = u'http://fanyi.youdao.com/openapi.do'
     voice_url = u'http://dict.youdao.com/dictvoice?type=2&audio={word}'
-    web_url = u'http://dict.youdao.com/w/eng/{0}/#keyfrom=dict2.index'
+    web_url = u'http://dict.youdao.com/search?keyfrom=dict.top&q='
+    translation_url = u'http://fanyi.youdao.com/translate_o?smartresult=dict&smartresult=rule'
 
     error_code = {
         0: u'正常',
@@ -50,19 +52,15 @@ class YoudaoSpider:
         :param use_api:是否使用有道API, 否则解析web版有道获取结果
         :return:与有道API返回的json数据一致的dict
         """
-        try:
-            if use_api:
-                self.params['q'] = self.word
-                r = requests.get(self.api_url, params=self.params)
-                r.raise_for_status()  # a 4XX client error or 5XX server error response
-                self.result = r.json()
-            else:
-                r = requests.get(self.web_url.format(self.word))
-                r.raise_for_status()
-                self.parse_html(r.text)
-        except RequestException as e:
-            print colored(u'网络错误: %s' % e.message, 'red')
-            sys.exit()
+        if use_api:
+            self.params['q'] = self.word
+            r = requests.get(self.api_url, params=self.params)
+            r.raise_for_status()    # a 4XX client error or 5XX server error response
+            self.result = r.json()
+        else:
+            r = requests.get(self.web_url + self.word)
+            r.raise_for_status()
+            self.parse_html(r.text)
         return self.result
 
     def parse_html(self, html):
@@ -101,9 +99,9 @@ class YoudaoSpider:
                 elif len(phons) == 1:
                     self.result['basic']['phonetic'] = unicode(phons[0].string)[1:-1]
 
-        # # 翻译
-        # if 'basic' not in self.result:
-        #     self.result['translation'] = self.get_translation(self.word)
+        # 翻译
+        if 'basic' not in self.result:
+            self.result['translation'] = self.get_translation(self.word)
 
         # 网络释义(短语)
         web = root.find(id='webPhrase')
@@ -114,15 +112,86 @@ class YoudaoSpider:
                     'value': [v.strip() for v in unicode(wordgroup.find('span').next_sibling).split(';')]
                 } for wordgroup in web.find_all(class_='wordGroup', limit=4)
             ]
+    
+    def md5(self, str_data):
+        """
+        md5加密
+        """
+        md5_obj = hashlib.md5()
+        byte_data = str_data.encode('utf-8')
+        md5_obj.update(byte_data)
+        return md5_obj.hexdigest()
 
+    def get_translation(self, word):
+        """
+        通过web版有道翻译抓取翻译结果
+        :param word:str 关键字
+        :return:list 翻译结果
+        """
+
+        client = 'fanyideskweb'  #判断是网页还是客户端
+        
+        # 由于网页是用的js的时间戳(毫秒)跟python(秒)的时间戳不在一个级别，所以需要*1000
+        salt = str(int(time.time()*1000))
+        
+        # 网上不同的攻略取的魔数是不一样的，可能对应不同的版本吧
+        c = "@6f#X3=cCuncYssPsuRUE"
+        # c = "rY0D^0'nM0}g5Mm1z%1G4"
+        # c = "ebSeFb%=XZ%T[KZ)c(sy!"
+        
+        # 根据md5的方式：md5(u + d + f + c)，拼接字符串生成sign参数。
+        sign = self.md5(client + word + salt + c)
+
+        # bv用到浏览器的版本编号
+        navigatorAppVersion = '5.0 (X11)'
+        bv = self.md5(navigatorAppVersion)
+
+        data = {
+            'i':word,
+            'from':'AUTO',
+            'to':'AUTO',            #判断是自动翻译还是人工翻译
+            'smartresult':'dict',
+            'client':client,
+            'salt':salt,               #当前时间戳
+            'sign':sign,   #获取加密串
+            'ts':salt,
+            'bv':bv,
+            'doctype':'json',
+            'version':'2.1',
+            'keyfrom':'fanyi.web',
+            'action':'FY_BY_REALTIME', #判断按回车提交或者点击按钮提交的方式
+            'typoResult':'false',
+        }
+
+        headers = {    
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'Accept-Encoding': 'gzip, deflate', #
+            'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+            'Connection': 'keep-alive',
+            'Content-Length': '259', #
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Host': 'fanyi.youdao.com',
+            'Origin':'http://fanyi.youdao.com/',  #请求头最初是从youdao发起的，Origin只用于post请求
+            'Referer':'http://fanyi.youdao.com/', #Referer则用于所有类型的请求
+            'User-Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0',
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+        r = requests.post(self.translation_url, headers=headers, data=data)
+        pattern = re.compile(r'"translateResult":\[(\[.+\])\]')
+        m = pattern.search(r.text)
+        result = json.loads(m.group(1))
+        return [item['tgt'] for item in result]
+        
     @classmethod
     def get_voice(cls, word):
-        voice_file = os.path.join(VOICE_DIR, word + '.mp3')
+        voice_file = os.path.join(VOICE_DIR, word+'.mp3')
         if not os.path.isfile(voice_file):
             r = requests.get(cls.voice_url.format(word=word))
             with open(voice_file, 'wb') as f:
                 f.write(r.content)
         return voice_file
+
+
 
 
 if __name__ == '__main__':

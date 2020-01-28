@@ -1,12 +1,19 @@
 # coding: utf-8
 
+import sys
 import os
 import errno
 import cPickle
 
 
-VERSION = '0.3.4'
-HOME = os.path.expanduser("~")
+VERSION = '0.3.1'
+if sys.platform.find('win')>=0:
+    HOME = "E:\\youdao"
+elif sys.platform.find('darwin')>=0 or sys.platform.find('linux')>=0:
+    HOME = os.path.expanduser("~")
+else:
+    error "unknow platform! %s" % (sys.platform)
+
 BASE_DIR = os.path.join(HOME, '.dict_youdao')   # 用户数据根目录
 VOICE_DIR = os.path.join(BASE_DIR, 'voice')     # 音频文件
 
@@ -37,10 +44,7 @@ def update():
     if config.get('version', '0') < '0.2.0':
         # silent_remove(DB_DIR)
         from model import db, Word
-        try:
-            db.drop_table(Word, fail_silently=True)
-        except AttributeError:
-            pass
+        db.drop_table(Word, fail_silently=True)
         Word.create_table()
 
 
