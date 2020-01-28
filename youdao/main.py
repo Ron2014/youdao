@@ -191,9 +191,8 @@ def main():
             use_dict = False
             use_db = False
 
-    SNAP = "D:\\youdao"
-    print "SNAP: " + SNAP
-    config.set_dict_path(SNAP + "\\dicts")
+    dict_path = os.path.join(config.HOME, "dicts")
+    config.set_dict_path(dict_path)
 
     # keyword = unicode(' '.join(args), encoding=sys.getfilesystemencoding())
     keyword = unicode(' '.join(args), encoding='utf-8')
