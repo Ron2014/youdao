@@ -1,0 +1,5 @@
+termcolor
+requests
+peewee==2.9.1
+bs4
+lxml==3.7.3
