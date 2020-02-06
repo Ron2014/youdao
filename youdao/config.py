@@ -14,14 +14,10 @@ Docker(Ubuntu/mount): $HOME/youdao
 '''
 HOME = os.path.expanduser("~")
 # print "===================", HOME
-if HOME == "/root":
-    # docker
-    HOME = "/GitHub/youdao-ME/youdao"
+if sys.platform == 'win':
+    HOME = "E:/GitHub/youdao-ME/youdao"
 else:
-    if sys.platform == 'win':
-        HOME = "E:/GitHub/youdao-ME/youdao"
-    else:
-        HOME = os.path.join(HOME, "Documents/GitHub/youdao-ME/youdao")
+    HOME = os.path.join(HOME, "Documents/GitHub/youdao-ME/youdao")
 assert HOME, "unknow platform %s" % (sys.platform)
 
 BASE_DIR = os.path.join(HOME, '.dict_youdao')   # 用户数据根目录
