@@ -12,13 +12,10 @@ Windows: E:/GitHub/youdao-ME/youdao
 Ubuntu/Macbook: $HOME/Document/GitHub/youdao-ME/youdao
 Docker(Ubuntu/mount): $HOME/youdao
 '''
-HOME = os.path.expanduser("~")
+HOME = os.environ.get("GITHUB_PATH")
+assert HOME, "unknow platform %s for ENV ${GITHUB_PATH}" % (sys.platform)
+HOME = os.path.join(HOME, "youdao-ME/youdao")
 # print "===================", HOME
-if sys.platform == 'win':
-    HOME = "E:/GitHub/youdao-ME/youdao"
-else:
-    HOME = os.path.join(HOME, "Documents/GitHub/youdao-ME/youdao")
-assert HOME, "unknow platform %s" % (sys.platform)
 
 BASE_DIR = os.path.join(HOME, '.dict_youdao')   # 用户数据根目录
 VOICE_DIR = os.path.join(BASE_DIR, 'voice')     # 音频文件
