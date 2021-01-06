@@ -2,4 +2,4 @@ termcolor
 requests
 peewee==2.9.1
 bs4
-lxml
+lxml # deps on libxml2-devel libxslt-devel
