@@ -3,7 +3,7 @@
 import sys
 import os
 import errno
-import cPickle
+import _pickle as cPickle
 
 
 VERSION = '0.3.1'
@@ -15,7 +15,7 @@ Docker(Ubuntu/mount): $HOME/youdao
 HOME = os.environ.get("GITHUB_PATH")
 assert HOME, "unknow platform %s for ENV ${GITHUB_PATH}" % (sys.platform)
 HOME = os.path.join(HOME, "youdao-ME/youdao")
-# print "===================", HOME
+# print("===================", HOME)
 
 BASE_DIR = os.path.join(HOME, '.dict_youdao')   # 用户数据根目录
 VOICE_DIR = os.path.join(BASE_DIR, 'voice')     # 音频文件
@@ -31,7 +31,7 @@ config = {'version': '0'}
 def silent_remove(filename):
     try:
         os.remove(filename)
-    except OSError, e:
+    except OSError as e:
         if e.errno != errno.ENOENT:
             raise
 

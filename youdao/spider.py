@@ -1,5 +1,6 @@
 # coding:utf-8
 
+import sys
 import time
 import hashlib
 import re
@@ -11,6 +12,9 @@ from termcolor import colored
 from bs4 import BeautifulSoup
 from config import VOICE_DIR
 
+global unicode
+if sys.version_info[0] >= 3:
+    unicode = str
 
 class YoudaoSpider:
     """
@@ -199,4 +203,4 @@ class YoudaoSpider:
 
 if __name__ == '__main__':
     test = YoudaoSpider('application')
-    print test.get_result()
+    print(test.get_result())

@@ -65,13 +65,13 @@ class _StarDictIfo(object):
         
         ifo_filename = '%s.ifo' % dict_prefix
         
-        print "xxxxxxxxxx"
-        print "ifo_filename: " + ' ' + ifo_filename
+        print("xxxxxxxxxx")
+        print("ifo_filename: " + ' ' + ifo_filename)
         
         try:
             _file = open(ifo_filename)
         except IOError:
-            print "good" + ifo_filename
+            print("good" + ifo_filename)
             raise Exception('.ifo file does not exists')
         
         # skipping ifo header
@@ -155,7 +155,7 @@ class _StarDictIdx(object):
         idx = CPyStarDictIndex.getIndex(word, self.idx_offset_bytes_size, self.idx_filename)
         if idx[2]:
             import socket
-            return socket.htonl(idx[1] & 0xffffffffL), socket.htonl(idx[2] & 0xffffffffL)
+            return socket.htonl(idx[1] & 0xffffffff), socket.htonl(idx[2] & 0xffffffff)
         else:
             raise KeyError('%s not found' % word)
     
@@ -614,7 +614,7 @@ def open_file(regular, gz):
 def main():
     import os
     dic = Dictionary(os.path.join('/home/chenlong/goldendic/stardict-langdao-ec-gb-2.4.2', 'langdao-ec-gb'))
-    print dic['a']
+    print(dic['a'])
 
 if __name__ == '__main__':
     main()
