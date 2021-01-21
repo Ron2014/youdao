@@ -3,8 +3,11 @@
 import sys
 import os
 import errno
-import _pickle as cPickle
 
+if sys.version_info.major == 3:
+    import _pickle as cPickle
+else:
+    import cPickle
 
 VERSION = '0.3.1'
 '''

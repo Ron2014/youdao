@@ -13,7 +13,9 @@ from termcolor import colored
 from spider import YoudaoSpider
 from model import Word
 import config
-from importlib import reload
+
+if sys.version_info.major == 3:
+    from importlib import reload
 
 # global unicode
 # if sys.version_info[0] >= 3:
